@@ -1,0 +1,15 @@
+# Python / PyScript Junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# User Data (Strict Safety)
+*.txt
+*.zip
+*.pdf
+*.log
+
+# System
+.DS_Store
+Thumbs.db
