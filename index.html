@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupchat Yıllık Özet - %100 Güvenli & Gizli</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Favicon & Social Tags -->
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <meta property="og:title" content="Groupchat Yearly Recap - Yıllık Özetin Hazır!">
+    <meta property="og:description"
+        content="Groupchatinizin en gevezesi, en komiği ve gece kuşu kim? Hemen öğren! %100 Gizli ve Güvenli.">
+    <meta property="og:image" content="./banner.png">
+    <meta property="og:url" content="https://lleonee.github.io/groupchat-recap/">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- PyScript - Using 2023.11.1 for stability if needed, sticking to what was there or updating to valid version -->
+    <!-- The user had 2024.1.1, I will leave it be but the link styles were default. -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        /* Extra override just in case */
+        .status-loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        .background-year {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36vw;
+            /* Reduced from 25vw */
+            font-weight: 900;
+            color: rgba(37, 211, 102, 0.08);
+            /* Increased opacity from 0.03 to 0.08 */
+            z-index: -1;
+            user-select: none;
+            pointer-events: none;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            line-height: 1;
+            width: 100%;
+            /* Ensure centering works well */
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background decoration -->
+    <div class="background-year">2026</div>
+
+    <div class="container">
+        <header>
+            <h1>Groupchat/DM Yearly Recap</h1>
+            <p class="subtitle">Sohbet geçmişiniz cihazınızdan asla dışarı çıkmaz.</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <!-- How to Use Section -->
+                <div class="how-to-wrapper" style="width: 100%; margin-bottom: 20px;">
+                    <button id="how-to-btn" class="secondary-btn"
+                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>❓ Nasıl Yaparım?</span>
+                    </button>
+                    <div id="how-to-content" class="hidden"
+                        style="text-align: left; background: #e0f2f1; padding: 15px; border-radius: 8px; font-size: 0.95em; margin-top: 10px; border: 1px solid #b2dfdb;">
+                        <h4 style="margin-top: 0; color: #075E54; margin-bottom: 10px;">iOS (iPhone) için:</h4>
+                        <ol style="margin-bottom: 0; padding-left: 20px; color: #334155; line-height: 1.5;">
+                            <li>İstediğiniz groupchat'e girin.</li>
+                            <li>Ekranın üstündeki grup ismine tıklayın.</li>
+                            <li>En aşağı kaydırın ve "Sohbeti Dışa Aktar" seçeneğine tıklayın.</li>
+                            <li>"Medyasız" seçeneğini seçin.</li>
+                            <li>Dosyayı "Dosyalar"a kaydedin.</li>
+                            <li>Aşağıdaki alana tıklayıp dosyanızı (zip veya txt) seçin.</li>
+                        </ol>
+
+                        <hr style="border: 0; border-top: 1px solid #b2dfdb; margin: 15px 0;">
+
+                        <h4 style="margin-top: 0; color: #075E54; margin-bottom: 10px;">Android için:</h4>
+                        <ol style="margin-bottom: 0; padding-left: 20px; color: #334155; line-height: 1.5;">
+                            <li>İstediğiniz groupchat'e girin.</li>
+                            <li>Sağ üstteki üç noktaya tıklayın > "Diğer" seçeneğine basın.</li>
+                            <li>"Sohbeti dışa aktar" seçeneğine tıklayın.</li>
+                            <li>"Medyasız" seçeneğini seçin.</li>
+                            <li>Dosyayı telefonunuza kaydedin.</li>
+                            <li>Aşağıdaki alana tıklayıp dosyanızı (zip veya txt) seçin.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Initially disabled with 'disabled-upload' class -->
+                <div class="file-drop-area" id="drop-area">
+                    <!-- Loading State (Visible initially) -->
+                    <div id="drop-loading" class="drop-content-wrapper">
+                        <div class="spinner dark-spinner"></div>
+                        <p class="loading-text">Sistem Hazırlanıyor, lütfen bekleyiniz...</p>
+                    </div>
+
+                    <!-- Upload State (Hidden initially) -->
+                    <div id="drop-content" class="drop-content-wrapper hidden">
+                        <span class="icon">📁</span>
+                        <span class="file-msg">Sohbet dosyanızı (txt veya zip) buraya sürükleyin veya yüklemek için
+                            tıklayın</span>
+                        <input class="file-input" type="file" id="file-upload" accept=".txt,.zip">
+                    </div>
+                </div>
+
+                <div id="file-info" class="hidden">
+                    <p>Seçilen dosya: <span id="filename"></span></p>
+                </div>
+
+                <!-- User Mapping Area -->
+                <div id="user-mapping-area" class="hidden">
+                    <h3>Kullanıcı İsimleri</h3>
+                    <p class="small-text">İsimleri düzeltmek için kutucuklara yeni ismi yazın.</p>
+
+
+                    <div id="user-mapping-list" class="user-list-container">
+                        <!-- User items will be injected here via Python/JS -->
+                    </div>
+                </div>
+
+                <button id="generate-btn" class="primary-btn" disabled>
+                    <span id="btn-text">Özeti Oluştur (PDF)</span>
+                    <div id="spinner" class="spinner hidden"></div>
+                </button>
+
+                <div id="result-options" class="hidden"
+                    style="gap: 15px; margin-top: 25px; flex-wrap: wrap; justify-content: center;">
+                    <button id="view-btn" class="result-btn btn-view"
+                        style="flex: 1; min-width: 150px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span>📄 Görüntüle</span>
+                    </button>
+                    <button id="download-btn" class="result-btn btn-download"
+                        style="flex: 1; min-width: 150px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span>⬇️ İndir</span>
+                    </button>
+
+                    <div style="width: 100%; text-align: center; margin-top: 10px; font-size: 0.9em; color: #64748b;">
+                        Beğendiyseniz <a href="https://github.com/lleonee" target="_blank"
+                            style="color: #25D366; font-weight: 600; text-decoration: none;">GitHub'da yıldızlayarak</a>
+                        veya paylaşarak destek olabilirsiniz! ⭐
+                    </div>
+                </div>
+            </div>
+
+            <div id="status-area">
+                <p id="status-msg"></p>
+            </div>
+        </main>
+
+        <footer style="margin-top: 50px; text-align: center; padding-bottom: 30px;">
+            <p style="color: #666; font-size: 1.1em; font-family: 'Inter', sans-serif;">
+                Made with <span style="color: #e25555;">❤</span> by
+                <a href="https://linkedin.com/in/leonefe" target="_blank"
+                    style="color: #25D366; text-decoration: none; font-weight: 600;">Leon Efe Apaydın</a>
+            </p>
+            <div style="margin-top: 15px; font-size: 0.95em;">
+                <a href="https://github.com/lleonee" target="_blank"
+                    style="color: #7f8c8d; text-decoration: none; margin: 0 12px; transition: color 0.3s;">GitHub</a>
+                <span style="color: #ccc;">|</span>
+                <a href="https://linkedin.com/in/leonefe" target="_blank"
+                    style="color: #7f8c8d; text-decoration: none; margin: 0 12px; transition: color 0.3s;">LinkedIn</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- PyScript Configuration -->
+    <py-config>
+        packages = ["pandas", "matplotlib", "numpy"]
+
+        [[fetch]]
+        from = "./"
+        files = ["recap_logic.py", "main.py"]
+    </py-config>
+
+    <!-- Main Entry Point -->
+    <script type="py" src="./main.py"></script>
+
+    <!-- UI Interaction Scripts -->
+    <script>
+        document.getElementById('how-to-btn').addEventListener('click', () => {
+            const content = document.getElementById('how-to-content');
+            content.classList.toggle('hidden');
+        });
+    </script>
+
+</body>
+
+</html>
