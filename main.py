@@ -149,6 +149,9 @@ async def process_selected_file():
         df = df[~df['sender'].str.startswith('=')]
         df = df[~df['sender'].str.startswith('$')]
         
+        # Apply Strong Regex Filter (Siz, You) from logic
+        df = df[~df['sender'].apply(recap_logic.is_invalid_sender)]
+        
         # Check current unique senders count
         initial_senders = df['sender'].unique()
         

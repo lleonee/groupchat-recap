@@ -1502,7 +1502,7 @@ class RecapRenderer:
         ax_title.text(0.5, 0.65, 'Emoji & Noktalama Kullanımı',
                       ha='center', va='center', fontsize=46, fontweight='bold',
                       color='#F39C12')
-        ax_title.text(0.5, 0.35, 'Duygularınızı böyle ifade ediyorsunuz.',
+        ax_title.text(0.5, 0.35, "Grubun gen-z'si ve TDK'si diyebiliriz.",
                       ha='center', va='center', fontsize=20,
                       color='#444444', style='italic')
         
