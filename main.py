@@ -225,6 +225,11 @@ async def on_generate_click(event):
     status_el.classList.add("status-loading")
     status_el.classList.remove("status-success")
     
+    # Show warning message
+    warning_el = document.getElementById("status-sub-msg")
+    warning_el.innerText = "Site donarsa endişelenmeyin, mesaj sayısı çoksa biraz daha uzun sürebilir."
+    warning_el.classList.remove("hidden")
+    
     # Allow UI to update
     await asyncio.sleep(0.1)
     
@@ -287,6 +292,9 @@ async def on_generate_click(event):
         status_el.innerText = "Tamamlandı! Yukarıdan bir seçenek seçin."
         status_el.classList.remove("status-loading")
         status_el.classList.add("status-success")
+        
+        # Hide warning message
+        document.getElementById("status-sub-msg").classList.add("hidden")
         
         document.getElementById("generate-btn").classList.add("hidden")
         document.getElementById("result-options").classList.remove("hidden")
