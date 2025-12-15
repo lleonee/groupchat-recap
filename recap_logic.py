@@ -81,6 +81,25 @@ ENCODED_BLACKLIST = "MiB0YW5lIMWfaWtlbGkgbWHDpywyaXF5aW0sMmtpbSwya2ltZSwya20sMmt
 
 DEFAULT_BLACKLIST = set(base64.b64decode(ENCODED_BLACKLIST).decode("utf-8").split(","))
 
+def is_invalid_sender(sender_name: str) -> bool:
+    """
+    Checks if the sender name is a system name (Siz, Sen, You) 
+    by stripping all non-alphanumeric characters.
+    """
+    if not sender_name:
+        return True
+        
+    # Remove all non-alphanumeric characters (including invisible unicode chars)
+    # This leaves only letters and numbers
+    clean_name = ''.join(filter(str.isalnum, str(sender_name))).lower()
+    
+    # Check against banned words
+    # 'siz' covers 'Siz', ' Siz ', '...Siz...'
+    if clean_name in ['siz', 'sen', 'you']:
+        return True
+        
+    return False
+
 class RecapRenderer:
     def __init__(self, data: dict, user_map: dict = None, blacklist: set = None, max_users=15, is_dm=False):
         self.raw_messages = data.get('messages', [])
@@ -108,6 +127,9 @@ class RecapRenderer:
         # Remove system messages
         self.chat_df = self.chat_df[~self.chat_df['sender'].str.contains('grubu', case=False, na=False)]
         self.chat_df = self.chat_df[self.chat_df['sender'] != "System"]
+        
+        # Filter out "Siz", "Sen", "You" using strong regex logic
+        self.chat_df = self.chat_df[~self.chat_df['sender'].apply(is_invalid_sender)]
         
         if self.group_name and not self.is_dm:
             self.chat_df = self.chat_df[self.chat_df['sender'] != self.group_name]
@@ -1249,7 +1271,7 @@ class RecapRenderer:
         
         # Helper to get top words from a dataframe
         def get_top_of_df(df_target):
-            all_text = ' '.join(df_target['content'].astype(str))
+            # Optimized Vectorized Logic
             stop_words = {
                 've', 'bir', 'bu', 'da', 'de', 'mi', 'mu', 'mü', 'için', 'ile', 'o', 'ne', 'var', 
                 'ya', 'çok', 'ben', 'sen', 'biz', 'siz', 'onlar', 'daha', 'en', 'şey', 'gibi',
@@ -1259,15 +1281,30 @@ class RecapRenderer:
                 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
                 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'to',
                 'message', 'deleted', 'omitted', 'media', 'image', 'video', 'audio', 'sticker',
-                'null', 'undefined', 'edited', 'medya', 'dahil', 'edilmedi', 'mesaj', 'düzenlendi'
+                'null', 'undefined', 'edited', 'medya', 'dahil', 'edilmedi', 'mesaj', 'düzenlendi',
+                'sabitlediniz', 'pinned'
             }
-            words_raw = all_text.lower().split()
-            word_counts = defaultdict(int)
-            for word in words_raw:
-                clean_word = ''.join(c for c in word if c.isalnum() or c in 'çğıöşüÇĞİÖŞÜ')
-                if len(clean_word) >= 3 and clean_word not in stop_words:
-                    word_counts[clean_word] += 1
-            return sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            
+            # 1. Clean punctuation (vectorized)
+            # Remove characters that are NOT alphanumeric or whitespace
+            # logic matches original: ''.join(c for c in word if c.isalnum()...)
+            # We use regex [^\w\s] but \w includes underscore. Original used isalnum.
+            # Close enough for performance gain.
+            clean_series = df_target['content'].astype(str).str.lower().str.replace(r'[^\w\s]', '', regex=True)
+            
+            # 2. Split and Explode
+            words = clean_series.str.split().explode()
+            
+            # 3. Filter length >= 3
+            words = words[words.str.len() >= 3]
+            
+            # 4. Filter stop words
+            words = words[~words.isin(stop_words)]
+            
+            # 5. Value Counts
+            top = words.value_counts().head(10)
+            
+            return list(zip(top.index, top.values))
 
         # DM MODE: Split View
         if getattr(self, 'is_dm', False):
@@ -2018,7 +2055,8 @@ class RecapRenderer:
             'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
             'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'to',
             'message', 'deleted', 'omitted', 'media', 'image', 'video', 'audio', 'sticker',
-            'document', 'contact', 'location', 'null', 'undefined', 'edited'
+            'document', 'contact', 'location', 'null', 'undefined', 'edited',
+            'sabitlediniz', 'pinned'
         }
         
         # Build word frequency per sender (Vectorized)
@@ -2026,12 +2064,16 @@ class RecapRenderer:
         clean_content = self.chat_df['content'].astype(str).str.lower().str.replace(r'[^\w\s]', '', regex=True)
         
         # 2. Explode into words (Sender -> Word mapping)
-        # stack() creates a MultiIndex, we drop the inner level to align with sender index
-        stacked_words = clean_content.str.split(expand=True).stack()
+        # Optimized: Use explode instead of split(expand=True) which causes OOM
+        stacked_words = clean_content.str.split().explode()
         
         # Join with sender column (using the index)
+        # Note: explode preserves index, so we can join directly or just assign if lengths match (which they don't after explode)
+        # We need to broadcast sender to the exploded words.
+        # Since stacked_words has the original index, we can just join.
+        
         df_words = self.chat_df[['sender']].join(
-            stacked_words.reset_index(level=1, drop=True).rename('word')
+            stacked_words.rename('word')
         )
         
         # 3. Filter words
