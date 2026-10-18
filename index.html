@@ -1,17 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Groupchat Yıllık Özet - %100 Güvenli & Gizli</title>
+
+    <!-- Privacy guarantee: the browser blocks every outgoing data request (fetch/XHR/beacon/WebSocket).
+         Chat files are only ever processed locally. Scripts may only come from this site and two pinned CDNs. -->
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <title>Groupchat Stats — %100 Güvenli & Gizli</title>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
     <!-- Favicon & Social Tags -->
     <link rel="icon" type="image/png" href="./favicon.png">
-    <meta property="og:title" content="Groupchat Yearly Recap - Yıllık Özetin Hazır!">
+    <meta property="og:title" content="Groupchat Stats — Sohbet İstatistiklerin Hazır!">
     <meta property="og:description"
         content="Groupchatinizin en gevezesi, en komiği ve gece kuşu kim? Hemen öğren! %100 Gizli ve Güvenli.">
     <meta property="og:image" content="./banner.png">
@@ -19,12 +24,12 @@
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!-- PyScript - Using 2023.11.1 for stability if needed, sticking to what was there or updating to valid version -->
-    <!-- The user had 2024.1.1, I will leave it be but the link styles were default. -->
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <!-- Chart.js CDN for lightweight charts (pinned version + integrity check) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+        integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+        crossorigin="anonymous"></script>
 
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=5">
     <style>
         /* Extra override just in case */
         .status-loading {
@@ -36,11 +41,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 36vw;
-            /* Reduced from 25vw */
+            font-size: 30vw;
+            /* Reduced from 36vw for STATS width */
             font-weight: 900;
-            color: rgba(37, 211, 102, 0.08);
-            /* Increased opacity from 0.03 to 0.08 */
+            color: rgba(155, 28, 49, 0.04);
+            /* Neutral translucent burgundy tint */
             z-index: -1;
             user-select: none;
             pointer-events: none;
@@ -70,12 +75,12 @@
 <body>
 
     <!-- Background decoration -->
-    <div class="background-year">2026</div>
+    <div class="background-year">STATS</div>
 
     <div class="container">
         <header>
-            <h1>Groupchat/DM Yearly Recap</h1>
-            <p class="subtitle">Sohbet geçmişiniz cihazınızdan asla dışarı çıkmaz.</p>
+            <h1>Groupchat Stats</h1>
+            <p class="subtitle">Your group chat, quantified.</p>
         </header>
 
         <main>
@@ -87,9 +92,9 @@
                         <span>❓ Nasıl Yaparım?</span>
                     </button>
                     <div id="how-to-content" class="hidden"
-                        style="text-align: left; background: #e0f2f1; padding: 15px; border-radius: 8px; font-size: 0.95em; margin-top: 10px; border: 1px solid #b2dfdb;">
-                        <h4 style="margin-top: 0; color: #075E54; margin-bottom: 10px;">iOS (iPhone) için:</h4>
-                        <ol style="margin-bottom: 0; padding-left: 20px; color: #334155; line-height: 1.5;">
+                        style="text-align: left; background: #fcfbf9; padding: 15px; border-radius: 0px; font-size: 0.95em; margin-top: 10px; border: 1px solid #171717;">
+                        <h4 style="margin-top: 0; color: #9B1C31; margin-bottom: 10px;">iOS (iPhone) için:</h4>
+                        <ol style="margin-bottom: 0; padding-left: 20px; color: #171717; line-height: 1.5;">
                             <li>İstediğiniz groupchat'e girin.</li>
                             <li>Ekranın üstündeki grup ismine tıklayın.</li>
                             <li>En aşağı kaydırın ve "Sohbeti Dışa Aktar" seçeneğine tıklayın.</li>
@@ -98,10 +103,10 @@
                             <li>Aşağıdaki alana tıklayıp dosyanızı (zip veya txt) seçin.</li>
                         </ol>
 
-                        <hr style="border: 0; border-top: 1px solid #b2dfdb; margin: 15px 0;">
+                        <hr style="border: 0; border-top: 1px solid rgba(23, 23, 23, 0.1); margin: 15px 0;">
 
-                        <h4 style="margin-top: 0; color: #075E54; margin-bottom: 10px;">Android için:</h4>
-                        <ol style="margin-bottom: 0; padding-left: 20px; color: #334155; line-height: 1.5;">
+                        <h4 style="margin-top: 0; color: #9B1C31; margin-bottom: 10px;">Android için:</h4>
+                        <ol style="margin-bottom: 0; padding-left: 20px; color: #171717; line-height: 1.5;">
                             <li>İstediğiniz groupchat'e girin.</li>
                             <li>Sağ üstteki üç noktaya tıklayın > "Diğer" seçeneğine basın.</li>
                             <li>"Sohbeti dışa aktar" seçeneğine tıklayın.</li>
@@ -109,6 +114,21 @@
                             <li>Dosyayı telefonunuza kaydedin.</li>
                             <li>Aşağıdaki alana tıklayıp dosyanızı (zip veya txt) seçin.</li>
                         </ol>
+                    </div>
+                </div>
+
+                <!-- Analysis period -->
+                <div class="period-selector" role="radiogroup" aria-label="Analiz dönemi">
+                    <span class="period-title">Analiz dönemi</span>
+                    <div class="period-options">
+                        <label class="period-option">
+                            <input type="radio" name="period" value="all" checked>
+                            <span>All Time</span>
+                        </label>
+                        <label class="period-option">
+                            <input type="radio" name="period" value="2026">
+                            <span>Sadece 2026</span>
+                        </label>
                     </div>
                 </div>
 
@@ -132,82 +152,95 @@
                 <div id="file-info" class="hidden">
                     <p>Seçilen dosya: <span id="filename"></span></p>
                 </div>
+            </div>
 
-                <!-- User Mapping Area -->
-                <div id="user-mapping-area" class="hidden">
-                    <h3>Kullanıcı İsimleri</h3>
-                    <p class="small-text">İsimleri düzeltmek için kutucuklara yeni ismi yazın.</p>
-
-
-                    <div id="user-mapping-list" class="user-list-container">
-                        <!-- User items will be injected here via Python/JS -->
+            <!-- Stepper Container -->
+            <div id="stepper-container" class="hidden">
+                <div class="stepper">
+                    <div class="step" id="step-parse">
+                        <div class="step-icon">1</div>
+                        <div class="step-label">Ayrıştırma</div>
+                    </div>
+                    <div class="step-line" id="line-parse-analyze"></div>
+                    <div class="step" id="step-analyze">
+                        <div class="step-icon">2</div>
+                        <div class="step-label">Analiz</div>
+                    </div>
+                    <div class="step-line" id="line-analyze-charts"></div>
+                    <div class="step" id="step-charts">
+                        <div class="step-icon">3</div>
+                        <div class="step-label">Sunum</div>
                     </div>
                 </div>
+                <div id="stepper-detail" class="stepper-detail-text"></div>
+            </div>
 
-                <button id="generate-btn" class="primary-btn" disabled>
-                    <span id="btn-text">Özeti Oluştur (PDF)</span>
-                    <div id="spinner" class="spinner hidden"></div>
-                </button>
-
-                <div id="result-options" class="hidden"
-                    style="gap: 15px; margin-top: 25px; flex-wrap: wrap; justify-content: center;">
-                    <button id="view-btn" class="result-btn btn-view"
-                        style="flex: 1; min-width: 150px; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                        <span>📄 Görüntüle</span>
-                    </button>
-                    <button id="download-btn" class="result-btn btn-download"
-                        style="flex: 1; min-width: 150px; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                        <span>⬇️ İndir</span>
-                    </button>
-
-                    <div style="width: 100%; text-align: center; margin-top: 10px; font-size: 0.9em; color: #64748b;">
-                        Beğendiyseniz <a href="https://github.com/lleonee" target="_blank"
-                            style="color: #25D366; font-weight: 600; text-decoration: none;">GitHub'da yıldızlayarak</a>
-                        veya paylaşarak destek olabilirsiniz! ⭐
+            <!-- Interactive Recap Dashboard (Slide Deck) -->
+            <div id="dashboard-area" class="hidden">
+                <h2 class="dashboard-title">✨ Sohbet Analiz Sonuçları</h2>
+                
+                <!-- Slide Deck Controls -->
+                <div class="deck-controls">
+                    <button id="deck-prev-btn" class="deck-btn">⬅️ Geri</button>
+                    <span id="deck-progress">Slide 1 / 23</span>
+                    <button id="deck-next-btn" class="deck-btn">İleri ➡️</button>
+                    <div class="deck-action-buttons" style="display: flex; gap: 8px; margin-left: 10px;">
+                        <button id="deck-names-btn" class="deck-btn-secondary">✏️ İsimler</button>
+                        <button id="deck-fullscreen-btn" class="deck-btn-secondary">📺 Tam Ekran</button>
+                        <button id="deck-pdf-btn" class="deck-btn-secondary">📥 Slayt PDF</button>
                     </div>
+                </div>
+                
+                <!-- Presentation Slide Viewport -->
+                <div class="slide-viewport">
+                    <div id="active-slide" class="slide-card">
+                        <!-- Active slide injected dynamically -->
+                    </div>
+                </div>
+                
+                <p class="slide-hint">💡 İpucu: Sol (⬅️) ve Sağ (➡️) yön tuşlarıyla slaytlar arasında geçiş yapabilir, Esc ile tam ekrandan çıkabilirsiniz.</p>
+            </div>
+
+            <!-- User Mapping Area -->
+            <div id="user-mapping-area" class="hidden">
+                <h3>Kullanıcı İsimleri</h3>
+                <p class="small-text">İsimleri düzeltmek için kutucuklara yeni ismi yazın.</p>
+
+
+                <div id="user-mapping-list" class="user-list-container">
+                    <!-- User items will be injected here via JS -->
                 </div>
             </div>
 
-            <div id="status-area">
+
+            <div id="status-area" class="hidden">
                 <p id="status-msg"></p>
             </div>
         </main>
 
         <footer style="margin-top: 50px; text-align: center; padding-bottom: 30px;">
-            <p style="color: #666; font-size: 1.1em; font-family: 'Inter', sans-serif;">
-                Made with <span style="color: #e25555;">❤</span> by
+            <p style="color: #171717; font-size: 1.1em; font-family: 'Inter', sans-serif;">
+                Made with <span style="color: #9B1C31;">❤</span> by
                 <a href="https://linkedin.com/in/leonefe" target="_blank"
-                    style="color: #25D366; text-decoration: none; font-weight: 600;">Leon Efe Apaydın</a>
+                    style="color: #9B1C31; text-decoration: none; font-weight: 600;">Leon Efe Apaydın</a>
             </p>
             <div style="margin-top: 15px; font-size: 0.95em;">
                 <a href="https://github.com/lleonee" target="_blank"
-                    style="color: #7f8c8d; text-decoration: none; margin: 0 12px; transition: color 0.3s;">GitHub</a>
-                <span style="color: #ccc;">|</span>
+                    style="color: #171717; text-decoration: none; margin: 0 12px; transition: color 0.3s;">GitHub</a>
+                <span style="color: #171717;">|</span>
                 <a href="https://linkedin.com/in/leonefe" target="_blank"
-                    style="color: #7f8c8d; text-decoration: none; margin: 0 12px; transition: color 0.3s;">LinkedIn</a>
+                    style="color: #171717; text-decoration: none; margin: 0 12px; transition: color 0.3s;">LinkedIn</a>
             </div>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #171717;">
+                Beğendiyseniz <a href="https://github.com/lleonee" target="_blank"
+                    style="color: #9B1C31; font-weight: 600; text-decoration: none;">GitHub'da yıldızlayarak</a>
+                veya paylaşarak destek olabilirsiniz! ⭐
+            </p>
         </footer>
     </div>
 
-    <!-- PyScript Configuration -->
-    <py-config>
-        packages = ["pandas", "matplotlib", "numpy"]
-
-        [[fetch]]
-        from = "./"
-        files = ["recap_logic.py", "main.py"]
-    </py-config>
-
-    <!-- Main Entry Point -->
-    <script type="py" src="./main.py"></script>
-
-    <!-- UI Interaction Scripts -->
-    <script>
-        document.getElementById('how-to-btn').addEventListener('click', () => {
-            const content = document.getElementById('how-to-content');
-            content.classList.toggle('hidden');
-        });
-    </script>
+    <!-- Main JavaScript Logic -->
+    <script src="./app.js?v=7"></script>
 
 </body>
 
