@@ -29,7 +29,7 @@
         integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
         crossorigin="anonymous"></script>
 
-    <link rel="stylesheet" href="./style.css?v=5">
+    <link rel="stylesheet" href="./style.css?v=7">
     <style>
         /* Extra override just in case */
         .status-loading {
@@ -117,6 +117,34 @@
                     </div>
                 </div>
 
+                <!-- Privacy Section -->
+                <div class="how-to-wrapper" style="width: 100%; margin-bottom: 20px;">
+                    <button id="privacy-btn" class="secondary-btn"
+                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>🔒 Gizlilik Hakkında</span>
+                    </button>
+                    <div id="privacy-content" class="hidden"
+                        style="text-align: left; background: #fcfbf9; padding: 15px; border-radius: 0px; font-size: 0.95em; margin-top: 10px; border: 1px solid #171717; color: #171717; line-height: 1.5;">
+                        <h4 style="margin-top: 0; color: #9B1C31; margin-bottom: 10px;">Sohbetiniz cihazınızdan çıkmaz</h4>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Yüklediğiniz dosya hiçbir sunucuya gönderilmez; bizim tarafımıza hiçbir veri geçmez.</li>
+                            <li>Tüm analiz, sizin cihazınızda, tarayıcınızın içinde (JavaScript ile) yapılır.</li>
+                            <li>Sayfanın güvenlik politikası (Content-Security-Policy), tarayıcının dışarıya veri isteği göndermesini tamamen engeller.</li>
+                            <li>Sohbetiniz hiçbir yere kaydedilmez; sayfayı kapattığınızda silinir.</li>
+                        </ul>
+
+                        <hr style="border: 0; border-top: 1px solid rgba(23, 23, 23, 0.1); margin: 15px 0;">
+
+                        <h4 style="margin-top: 0; color: #9B1C31; margin-bottom: 10px;">Kendi bilgisayarınızda çalıştırın</h4>
+                        <p style="margin: 0 0 8px 0;">İsterseniz kaynak kodu <a href="https://github.com/lleonee/groupchat-recap" target="_blank" rel="noopener noreferrer" style="color: #9B1C31; font-weight: 600;">GitHub</a>'dan indirip kendi bilgisayarınızda (local) çalıştırabilirsiniz:</p>
+                        <ol style="margin: 0; padding-left: 20px;">
+                            <li>GitHub'daki "Code" → "Download ZIP" ile indirip klasörü açın.</li>
+                            <li>Klasörde <code>python -m http.server</code> komutunu çalıştırın.</li>
+                            <li>Tarayıcıda <code>http://localhost:8000</code> adresine gidin.</li>
+                        </ol>
+                    </div>
+                </div>
+
                 <!-- Analysis period -->
                 <div class="period-selector" role="radiogroup" aria-label="Analiz dönemi">
                     <span class="period-title">Analiz dönemi</span>
@@ -145,8 +173,15 @@
                         <span class="icon">📁</span>
                         <span class="file-msg">Sohbet dosyanızı (txt veya zip) buraya sürükleyin veya yüklemek için
                             tıklayın</span>
-                        <input class="file-input" type="file" id="file-upload" accept=".txt,.zip">
+                        <input class="file-input" type="file" id="file-upload" accept=".txt,.zip,text/plain,application/zip,application/x-zip-compressed">
                     </div>
+                </div>
+
+                <!-- Demo: analyse a generated, fictional group chat -->
+                <div class="sample-wrapper">
+                    <span class="sample-or">ya da</span>
+                    <button id="sample-btn" class="secondary-btn sample-btn">✨ Örnek sunum oluştur</button>
+                    <p class="sample-hint">Elinizde sohbet dosyası yoksa, hayali bir arkadaş grubunun ~1,5 yıllık sohbetiyle siteyi deneyin.</p>
                 </div>
 
                 <div id="file-info" class="hidden">
@@ -198,7 +233,7 @@
                     </div>
                 </div>
                 
-                <p class="slide-hint">💡 İpucu: Sol (⬅️) ve Sağ (➡️) yön tuşlarıyla slaytlar arasında geçiş yapabilir, Esc ile tam ekrandan çıkabilirsiniz.</p>
+                <p class="slide-hint">💡 İpucu: Sol (⬅️) ve Sağ (➡️) yön tuşlarıyla (telefonda kaydırarak) slaytlar arasında geçiş yapabilir, Esc ile tam ekrandan çıkabilirsiniz.</p>
             </div>
 
             <!-- User Mapping Area -->
@@ -220,19 +255,19 @@
 
         <footer style="margin-top: 50px; text-align: center; padding-bottom: 30px;">
             <p style="color: #171717; font-size: 1.1em; font-family: 'Inter', sans-serif;">
-                Made with <span style="color: #9B1C31;">❤</span> by
-                <a href="https://linkedin.com/in/leonefe" target="_blank"
+                Made By
+                <a href="https://linkedin.com/in/leonefe" target="_blank" rel="noopener noreferrer"
                     style="color: #9B1C31; text-decoration: none; font-weight: 600;">Leon Efe Apaydın</a>
             </p>
             <div style="margin-top: 15px; font-size: 0.95em;">
-                <a href="https://github.com/lleonee" target="_blank"
+                <a href="https://github.com/lleonee" target="_blank" rel="noopener noreferrer"
                     style="color: #171717; text-decoration: none; margin: 0 12px; transition: color 0.3s;">GitHub</a>
                 <span style="color: #171717;">|</span>
-                <a href="https://linkedin.com/in/leonefe" target="_blank"
+                <a href="https://linkedin.com/in/leonefe" target="_blank" rel="noopener noreferrer"
                     style="color: #171717; text-decoration: none; margin: 0 12px; transition: color 0.3s;">LinkedIn</a>
             </div>
             <p style="margin-top: 15px; font-size: 0.9em; color: #171717;">
-                Beğendiyseniz <a href="https://github.com/lleonee" target="_blank"
+                Beğendiyseniz <a href="https://github.com/lleonee" target="_blank" rel="noopener noreferrer"
                     style="color: #9B1C31; font-weight: 600; text-decoration: none;">GitHub'da yıldızlayarak</a>
                 veya paylaşarak destek olabilirsiniz! ⭐
             </p>
@@ -240,7 +275,8 @@
     </div>
 
     <!-- Main JavaScript Logic -->
-    <script src="./app.js?v=7"></script>
+    <script src="./sample-chat.js?v=1"></script>
+    <script src="./app.js?v=10"></script>
 
 </body>
 

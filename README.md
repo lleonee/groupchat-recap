@@ -10,6 +10,7 @@ Groupchat'leriniz cihazınızdan asla dışarı çıkmaz (**Local & Privacy Firs
 - 💬 Kelime ve emoji analizi
 - 🖥️ Tam ekran, interaktif slayt sunumu
 - 📥 Sunumu PDF olarak indirme
+- ✨ "Örnek sunum oluştur" ile kendi sohbetinizi yüklemeden, hayali bir grup sohbetiyle deneme
 
 ## Nasıl Çalıştırırım? (Local)
 

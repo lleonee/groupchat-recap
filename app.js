@@ -59,33 +59,17 @@ function setStepperDetail(text) {
     if (el) el.innerText = text;
 }
 
-function formatTopWordsFromMessages(messages, limit = 10) {
-    const stopWords = new Set([
-        've', 'bir', 'bu', 'da', 'de', 'mi', 'mu', 'mü', 'için', 'ile', 'o', 'ne', 'var',
-        'ya', 'çok', 'ben', 'sen', 'biz', 'siz', 'onlar', 'daha', 'en', 'şey', 'gibi',
-        'ama', 'veya', 'olan', 'oldu', 'yok', 'ki', 'mı', 'nasıl', 'neden', 'nerede',
-        'kim', 'şimdi', 'sonra', 'var', 'yani', 'falan', 'işte', 'hani', 'böyle', 'öyle',
-        'şu', 'bana', 'sana', 'ona', 'bunu', 'şunu', 'onu', 'the', 'a', 'an', 'and', 'or',
-        'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
-        'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'to',
-        'message', 'deleted', 'omitted', 'media', 'image', 'video', 'audio', 'sticker',
-        'null', 'undefined', 'edited', 'medya', 'dahil', 'edilmedi', 'mesaj', 'düzenlendi'
-    ]);
-
-    const wordCounts = new Map();
-    messages.forEach(message => {
-        String(message.content || '')
-            .toLowerCase()
-            .split(/[^\wğüşıöç]+/u)
-            .forEach(word => {
-                if (word.length >= 3 && !stopWords.has(word)) {
-                    wordCounts.set(word, (wordCounts.get(word) || 0) + 1);
-                }
-            });
-    });
-
-    return [...wordCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+// Words of a message: Turkish-aware lowercase ("İYİ" -> "iyi", not "i̇yi̇"), split on anything that isn't a letter/digit
+function splitWords(text) {
+    return String(text || "").toLocaleLowerCase("tr").split(/[^\p{L}\p{N}_]+/u).filter(w => w.length > 0);
 }
+
+// Counter keyed by chat text: no prototype, so words like "constructor" or "__proto__" count like any other word
+function newCounter() {
+    return Object.create(null);
+}
+
+const EMOJI_REGEX = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu;
 
 function formatDateForPdf(date) {
     if (!date) return '';
@@ -192,10 +176,48 @@ function parseLineString(line, index) {
         }
     }
 
-    if (timestamp && sender && content) {
+    if (timestamp && sender && content && TIMESTAMP_START.test(timestamp)) {
         return { timestamp, sender, content };
     }
     return null;
+}
+
+const TIMESTAMP_START = /^\s*\d{1,2}[./]\d{1,2}[./]\d{2,4}/;
+const ENCRYPTION_NOTICE = /uçtan uca şifrelidir|end-to-end encrypted/i;
+
+// Whole export -> message list. Lines that don't start with a timestamp belong to the previous (multi-line) message;
+// lines starting with an invisible direction mark (iOS media/deleted notices) are skipped as before.
+function parseChatText(textContent) {
+    const lines = [];
+    let noticeSender = null;
+
+    textContent.split(/\r?\n/).forEach((line, idx) => {
+        const parsed = parseLineString(line, idx);
+        if (parsed) {
+            if (lines.length <= 2 && ENCRYPTION_NOTICE.test(parsed.content)) {
+                // The notice is not a message. In groups its sender is the group name, in DMs the contact.
+                if (parsed.sender !== "System") noticeSender = parsed.sender.trim();
+                return;
+            }
+            lines.push(parsed);
+        } else {
+            const trimmed = line.trim();
+            const isContinuation = lines.length > 0 && trimmed
+                && !/^[‎‏]/.test(trimmed)
+                && !TIMESTAMP_START.test(trimmed.replace(/^\[/, ""));
+            if (isContinuation) lines[lines.length - 1].content += "\n" + trimmed;
+        }
+    });
+
+    // Group name only if the notice sender isn't one of two DM participants
+    let groupName = null;
+    if (noticeSender) {
+        const others = new Set(lines.map(l => l.sender).filter(s => s !== "System" && s.trim() !== noticeSender));
+        if (others.size >= 2) groupName = noticeSender;
+    }
+
+    chatDateOrder = detectDateOrder(lines.map(p => p.timestamp));
+    return { lines, groupName };
 }
 
 function getLocalJSDateString(date) {
@@ -235,10 +257,9 @@ function isBotSender(sender) {
 function calculateStats(rawMessages, groupName, userMap = {}, period = selectedPeriod) {
     let messages = rawMessages.map(m => {
         let sender = m.sender;
-        if (userMap[sender]) {
+        if (Object.hasOwn(userMap, sender)) {
             sender = userMap[sender];
         }
-        sender = sender.replace(/\$/g, '\\$');
         const withoutPlaceholders = stripPlaceholders(m.content);
         return {
             timestamp: m.timestamp,
@@ -456,13 +477,12 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     });
 
     // J. Emoji & Punctuation analysis
-    const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}]/gu;
-    const emojiCounts = {};
+    const emojiCounts = newCounter();
     const punctuationCounts = { '?': 0, '!': 0, '.': 0, ',': 0 };
 
     parsedMessages.forEach(m => {
         // Emojis
-        const emojis = m.content.match(emojiRegex);
+        const emojis = m.content.match(EMOJI_REGEX);
         if (emojis) {
             emojis.forEach(e => {
                 emojiCounts[e] = (emojiCounts[e] || 0) + 1;
@@ -484,8 +504,9 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     const capslockCounts = {};
     sendersList.forEach(s => capslockCounts[s] = 0);
     parsedMessages.forEach(m => {
-        const cleaned = m.content.replace(/[^a-zA-ZĞÜŞİÖÇğüşiöç]/g, '');
-        if (cleaned.length > 3 && cleaned === cleaned.toLocaleUpperCase('tr')) {
+        // Letters only; scripts without upper/lower case (Arabic, CJK...) never count as shouting
+        const cleaned = m.content.replace(/[^\p{L}]/gu, '');
+        if (cleaned.length > 3 && cleaned === cleaned.toLocaleUpperCase('tr') && cleaned !== cleaned.toLocaleLowerCase('tr')) {
             if (capslockCounts[m.sender] !== undefined) {
                 capslockCounts[m.sender]++;
             }
@@ -497,8 +518,7 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     const profanityCounts = {};
     sendersList.forEach(s => profanityCounts[s] = 0);
     parsedMessages.forEach(m => {
-        const words = m.content.toLowerCase().split(/[^\wğüşıöç]+/u);
-        words.forEach(w => {
+        splitWords(m.content).forEach(w => {
             if (blacklistWords.has(w)) {
                 if (profanityCounts[m.sender] !== undefined) {
                     profanityCounts[m.sender]++;
@@ -572,7 +592,7 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     });
 
     sendersList.forEach(user => {
-        const userLower = user.toLowerCase();
+        const userLower = user.toLocaleLowerCase('tr');
         let nameParts = userLower.split(/\s+/).filter(p => p.length >= 3);
         if (nameParts.length === 0) nameParts = [userLower];
 
@@ -583,15 +603,16 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
             const lastChar = p.slice(-1);
             const baseEscaped = baseChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const lastEscaped = lastChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            return `\\b${baseEscaped}${lastEscaped}+.{0,2}\\b`;
+            // Unicode-aware word edges (\b is ASCII-only and never matches around names like "Çağla" or "Ömür")
+            return `(?<![\\p{L}\\p{N}_])${baseEscaped}${lastEscaped}+[\\p{L}\\p{N}_']{0,2}(?![\\p{L}\\p{N}_])`;
         }).filter(pat => pat.length > 0);
 
         if (patterns.length === 0) return;
 
-        const pattern = new RegExp(patterns.join('|'), 'i');
+        const pattern = new RegExp(patterns.join('|'), 'iu');
 
         parsedMessages.forEach(m => {
-            if (m.sender !== user && pattern.test(m.content)) {
+            if (m.sender !== user && pattern.test(m.content.toLocaleLowerCase('tr'))) {
                 totalMentionsReceived[user]++;
                 totalMentionsGiven[m.sender]++;
                 mentionMatrix[m.sender][user]++;
@@ -650,7 +671,7 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     sendersList.forEach(s => {
         const words = parsedMessages
             .filter(m => m.sender === s)
-            .flatMap(m => m.content.toLowerCase().split(/[^\wğüşıöç]+/u))
+            .flatMap(m => splitWords(m.content))
             .filter(w => w.length >= 3);
         uniqueWordCounts[s] = new Set(words).size;
     });
@@ -700,9 +721,9 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
     const weeklyTimelineData = sortedWeeks.map(w => weeklyTimelineCounts[w]);
 
     // R. Top Words counts (Exclude blacklist)
-    const allWordsCounts = {};
+    const allWordsCounts = newCounter();
     parsedMessages.forEach(m => {
-        const words = m.content.toLowerCase().split(/[^\wğüşıöç]+/u).filter(w => w.length >= 3);
+        const words = splitWords(m.content).filter(w => w.length >= 3);
         words.forEach(w => {
             if (!blacklistWords.has(w)) {
                 allWordsCounts[w] = (allWordsCounts[w] || 0) + 1;
@@ -710,6 +731,7 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
         });
     });
     const topWords = Object.entries(allWordsCounts)
+        .filter(([w]) => !DM_WORD_STOPWORDS.has(w))
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
 
@@ -724,6 +746,8 @@ function calculateStats(rawMessages, groupName, userMap = {}, period = selectedP
                 winner = s;
             }
         }
+        // Nobody did it at all (e.g. no caps-lock message): no winner instead of an alphabetical one
+        if (maxVal <= 0) return { winner: "Yok", count: 0 };
         return { winner, count: maxVal };
     };
 
@@ -862,10 +886,10 @@ function renderTopWordsSlide(el, data, minLen, label) {
 
     if (data.isDM) {
         const topWordsOf = (user) => {
-            const counts = {};
+            const counts = newCounter();
             data.messages.forEach(m => {
                 if (m.sender !== user) return;
-                String(m.content || '').toLowerCase().split(/[^\wğüşıöç]+/u).forEach(w => {
+                splitWords(m.content).forEach(w => {
                     if (w.length >= minLen && !DM_WORD_STOPWORDS.has(w)) counts[w] = (counts[w] || 0) + 1;
                 });
             });
@@ -888,7 +912,7 @@ function renderTopWordsSlide(el, data, minLen, label) {
     }
 
     const topWords = Object.entries(data.stats.allWordsCounts)
-        .filter(([word]) => word.length >= minLen)
+        .filter(([word]) => word.length >= minLen && !DM_WORD_STOPWORDS.has(word))
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
 
@@ -943,13 +967,14 @@ const SLIDES_MAP = {
                 const total = c1 + c2;
                 const p1 = (c1 / total) * 100;
                 const p2 = (c2 / total) * 100;
+                const leader = c1 >= c2 ? u1 : u2;
 
                 el.innerHTML = `
                     <div class="slide-split-layout">
                         <div class="slide-left">
                             <span class="slide-winner-title">Mesaj Sayısı Dengesi</span>
                             <h2 class="slide-winner-name" style="font-size: 2.2rem;">
-                                ${Math.abs(p1 - p2) < 10 ? 'Mükemmel uyum.' : `Sohbeti ${esc(u1)} taşıyor!`}
+                                ${Math.abs(p1 - p2) < 10 ? 'Mükemmel uyum.' : `Sohbeti ${esc(leader)} taşıyor!`}
                             </h2>
                             <p class="slide-winner-detail">Toplam ${total.toLocaleString()} mesajın gönderilme oranı.</p>
                         </div>
@@ -1072,7 +1097,7 @@ const SLIDES_MAP = {
             el.innerHTML = `
                 <div class="slide-title-layout" style="text-align: center;">
                     <span class="slide-winner-title">En Uzun Mesajlaşma Günü</span>
-                    <h2 class="slide-winner-name" style="font-size: 3.6rem; margin: 1.5rem 0;">${busiestDateStr}</h2>
+                    <h2 class="slide-winner-name" style="font-size: clamp(2rem, 9vw, 3.6rem); margin: 1.5rem 0;">${busiestDateStr}</h2>
                     <p class="slide-winner-detail" style="font-size: 1.8rem; font-weight: 800; color: #9B1C31;">Tam ${msgCount} mesaj!</p>
                     <p class="slide-winner-detail" style="font-style: italic; margin-top: 1rem;">Parmaklarınız ağrımadı mı?</p>
                 </div>
@@ -1096,7 +1121,7 @@ const SLIDES_MAP = {
                 <div class="slide-split-layout">
                     <div class="slide-left">
                         <span class="slide-winner-title">En Yoğun Saat</span>
-                        <h2 class="slide-winner-name" style="font-size: 3.5rem;">${peakHour.toString().padStart(2, '0')}:00</h2>
+                        <h2 class="slide-winner-name" style="font-size: clamp(2rem, 9vw, 3.5rem);">${peakHour.toString().padStart(2, '0')}:00</h2>
                         <p class="slide-winner-detail" style="font-size: 2rem; font-weight: 800; color: #9B1C31;">${peakCount.toLocaleString()}</p>
                         <p class="slide-winner-detail" style="font-size: 0.95rem; font-style: italic;">mesaj</p>
                     </div>
@@ -1152,7 +1177,7 @@ const SLIDES_MAP = {
             el.innerHTML = `
                 <div class="slide-title-layout" style="text-align: center;">
                     <span class="slide-winner-title">Sessizlik Haritası</span>
-                    <h2 class="slide-winner-name" style="font-size: 3.6rem; margin: 1.5rem 0;">${startHourStr}:00 - ${endHourStr}:00</h2>
+                    <h2 class="slide-winner-name" style="font-size: clamp(2rem, 9vw, 3.6rem); margin: 1.5rem 0;">${startHourStr}:00 - ${endHourStr}:00</h2>
                     <p class="slide-winner-detail" style="font-size: 1.5rem; font-weight: 700; color: #9B1C31;">En sessiz saatleriniz.</p>
                     <p class="slide-winner-detail" style="font-style: italic; margin-top: 1rem;">Muhtemelen uyuyorsunuz.</p>
                 </div>
@@ -1236,6 +1261,7 @@ const SLIDES_MAP = {
 
             const formatDelta = (sec) => {
                 const min = sec / 60;
+                if (min < 1) return "< 1 dk";
                 if (min < 60) {
                     return `${Math.round(min)} dk`;
                 } else {
@@ -1351,7 +1377,7 @@ const SLIDES_MAP = {
                             ${data.stats.champions.firstResponder.count} Gün
                         </p>
                         <p class="slide-winner-detail" style="font-size: 0.95rem; font-style: italic;">
-                            ${winner ? esc(winner) + "'ın günaydınına asla gecikmiyor!" : 'Gruba hemen canlı veriyor!'}
+                            Kimsenin günaydını cevapsız kalmıyor!
                         </p>
                     </div>
                     <div class="slide-right">
@@ -1386,12 +1412,12 @@ const SLIDES_MAP = {
         groupOnly: true,
         render: (el, data) => {
             const nightRatios = {};
+            const totalNight = Object.values(data.stats.nightOwls).reduce((a, b) => a + b, 0) || 1;
             for (let s in data.stats.nightOwls) {
-                const total = data.stats.messageCounts[s] || 1;
-                nightRatios[s] = (data.stats.nightOwls[s] / total) * 100;
+                nightRatios[s] = (data.stats.nightOwls[s] / totalNight) * 100;
             }
             const sortedNight = Object.entries(nightRatios).sort((a, b) => b[1] - a[1]);
-            const winner = sortedNight[0]?.[0] || 'Yok';
+            const winner = sortedNight[0]?.[1] > 0 ? sortedNight[0][0] : 'Yok';
             const winnerRatio = sortedNight[0]?.[1] || 0;
 
             el.innerHTML = `
@@ -1443,7 +1469,7 @@ const SLIDES_MAP = {
                 morningRatios[s] = (data.stats.morningBirds[s] / totalMorning) * 100;
             }
             const sortedMorning = Object.entries(morningRatios).sort((a, b) => b[1] - a[1]);
-            const winner = sortedMorning[0]?.[0] || 'Yok';
+            const winner = sortedMorning[0]?.[1] > 0 ? sortedMorning[0][0] : 'Yok';
             const winnerRatio = sortedMorning[0]?.[1] || 0;
 
             el.innerHTML = `
@@ -1614,9 +1640,8 @@ const SLIDES_MAP = {
         id: "emoji_punctuation",
         title: "Emoji & Noktalama Kullanımı",
         render: (el, data) => {
-            const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}]/gu;
             const countEmojis = (text) => {
-                const matches = text.match(emojiRegex);
+                const matches = text.match(EMOJI_REGEX);
                 return matches ? matches.length : 0;
             };
             const countPunctuation = (text) => {
@@ -1846,16 +1871,14 @@ const SLIDES_MAP = {
                 ]);
                 const wordCounts = {};
                 const totalWords = {};
-                const globalWordCounts = {};
+                const globalWordCounts = newCounter();
                 data.senders.forEach(s => {
-                    wordCounts[s] = {};
+                    wordCounts[s] = newCounter();
                     totalWords[s] = 0;
                 });
                 data.messages.forEach(m => {
                     if (wordCounts[m.sender] !== undefined) {
-                        String(m.content || '')
-                            .toLowerCase()
-                            .split(/[^\wğüşıöç]+/u)
+                        splitWords(m.content)
                             .forEach(w => {
                                 if (w.length >= 3 && !stopWords.has(w)) {
                                     wordCounts[m.sender][w] = (wordCounts[m.sender][w] || 0) + 1;
@@ -1987,7 +2010,7 @@ const SLIDES_MAP = {
                 type: 'bar',
                 data: {
                     labels: data.stats.sortedWeeks.map(w => {
-                        const date = new Date(w);
+                        const date = new Date(`${w}T00:00:00`);
                         const yearSuffix = data.multiYear ? ` '${String(date.getFullYear()).slice(2)}` : '';
                         return `${date.getDate()} ${date.toLocaleString('tr-TR', { month: 'short' })}${yearSuffix}`;
                     }),
@@ -2084,10 +2107,10 @@ const SLIDES_MAP = {
                 ['En Uzun Mesajlaşma Günü', 'Bir gün içinde karşılıklı en çok mesaj atılan gün.'],
                 ['En Yoğun Saat', 'İkinizin toplamda en çok mesajlaştığı saat dilimi (Örn: 22:00-23:00).'],
                 ['Sessizlik Haritası', 'Günün en az mesaj gönderilen 3 saatlik dilimi.'],
-                ['Sohbet Ritmi', 'Zaman içindeki (haftalık) mesajlaşma yoğunluğu.'],
+                ['Sohbet Ritmi', 'Zaman içindeki (aylık) mesajlaşma yoğunluğu.'],
                 ['En Uzun Mesajları Yazan', 'Ortalama mesaj uzunluğu (karakter) en yüksek olan kişi.'],
                 ['En Çok Kullanılan Kelimeler', 'En sık kullanılan kelimeler (bağlaçlar hariç).'],
-                ['Emoji & Noktalama', 'En çok emoji ve noktalama işareti kullanan kişiler.'],
+                ['Emoji & Noktalama', 'En çok emoji ve ! ? ... :) gibi işaret kullanan kişiler.'],
                 ['Seriler (Streaks)', 'Hiç ara vermeden en uzun süre (gün) mesajlaşılan dönem.'],
                 ['Kendine Özgü Kelimeler', 'Diğer kişiye kıyasla daha sık kullanılan kelimeler.'],
                 ['Kötü Söz Yoğunluğu', 'Sansürlü kelime listesindeki kelimelerin kullanım sıklığı.'],
@@ -2095,16 +2118,16 @@ const SLIDES_MAP = {
                 ['Haftalık Şampiyon', 'Her hafta en çok mesaj gönderen kişi (Haftanın Rengi).']
             ] : [
                 ['Grubun En Aktifi', 'Toplam mesaj sayısına göre en çok mesaj gönderen kişi.'],
-                ['Gece Kuşu', 'Saat 00:00-05:00 arası en çok mesaj gönderen kişi.'],
+                ['Gece Kuşu', 'Saat 00:00-05:00 arası en çok mesaj gönderen kişi (bu saatlerdeki mesajların payı).'],
+                ['Sabah Kuşu', 'Saat 05:00-09:30 arası en çok mesaj gönderen kişi (bu saatlerdeki mesajların payı).'],
                 ['Günün İlk Mesajı', 'Saat 06:00\'dan sonraki günün ilk mesajını en çok gönderen kişi.'],
-                ['Sabah İlk Cevap Veren', 'Günün ilk mesajından sonra ilk cevap veren kişi.'],
+                ['Sabah İlk Cevap Veren', 'Günün ilk mesajına (06:00 sonrası) ilk cevap veren, ilk mesajı atandan farklı kişi.'],
                 ['Konuşma Başlatan', '1 saatten fazla sessizlikten sonra ilk mesaj gönderen kişi.'],
-                ['İlk Cevap Veren', 'Konuşma başlatandan farklı, hemen sonra mesaj gönderen kişi.'],
                 ['Konuşma Sürdürme', 'Başlattığı konuşmaların ortalama kaç mesaj sürdüğü.'],
                 ['En Uzun Mesajları Yazan', 'Ortalama mesaj uzunluğu (karakter) en yüksek olan kişi.'],
                 ['En Yoğun Saat', 'Grubun en çok mesaj gönderdiği saat dilimi.'],
                 ['En Çok Kullanılan Kelimeler', 'En sık kullanılan kelimeler (bağlaçlar hariç).'],
-                ['Emoji & Noktalama', 'En çok emoji ve noktalama işareti kullanan kişiler.'],
+                ['Emoji & Noktalama', 'En çok emoji ve ! ? ... :) gibi işaret kullanan kişiler.'],
                 ['En Çok Etkileşimde Olan İkililer', 'Araya başkası girmeden en az 5 mesaj süren konuşmalar.'],
                 ['İsmi En Çok Bahsedilen', 'Mesajlarda ismi en çok geçirilen/bahsedilen kişi.'],
                 ['En Uzun Sessizlik', 'İki mesajı arasında en uzun süre geçen kişi (gün).'],
@@ -2124,11 +2147,11 @@ const SLIDES_MAP = {
             `).join('');
 
             el.innerHTML = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; max-height: 230px; overflow-y: auto; padding-right: 0.5rem; text-align: left;">
+                <div class="methodology-grid">
                     ${listHTML}
                 </div>
                 <p style="font-size: 0.75rem; color: #4A4A4A; font-style: italic; text-align: center; margin-top: 0.75rem; border-top: 1px solid rgba(23, 23, 23, 0.1); padding-top: 0.5rem;">
-                    Not: Tüm hesaplamalar sohbet geçmişinin tamamı üzerinden yapılmıştır.
+                    Not: Tüm hesaplamalar ${data.periodLabel === "2026" ? "sohbetin 2026 yılına ait mesajları" : "sohbet geçmişinin tamamı"} üzerinden yapılmıştır.
                 </p>
             `;
         }
@@ -2298,6 +2321,11 @@ function setupEventListeners() {
         document.getElementById("how-to-content").classList.toggle("hidden");
     });
 
+    // "Gizlilik Hakkında" toggle
+    document.getElementById("privacy-btn").addEventListener("click", () => {
+        document.getElementById("privacy-content").classList.toggle("hidden");
+    });
+
     // Presentation deck button click listeners
     document.getElementById("deck-prev-btn").addEventListener("click", () => handleDeckNavigation(-1));
     document.getElementById("deck-next-btn").addEventListener("click", () => handleDeckNavigation(1));
@@ -2313,6 +2341,20 @@ function setupEventListeners() {
         }
     });
 
+    // Touch: horizontal swipe on the slide changes slides (vertical swipes still scroll)
+    const slideViewport = document.querySelector(".slide-viewport");
+    let touchStart = null;
+    slideViewport.addEventListener("touchstart", (e) => {
+        touchStart = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    }, { passive: true });
+    slideViewport.addEventListener("touchend", (e) => {
+        if (!touchStart || !calculatedStats) return;
+        const dx = e.changedTouches[0].clientX - touchStart.x;
+        const dy = e.changedTouches[0].clientY - touchStart.y;
+        touchStart = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) handleDeckNavigation(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
     // Fullscreen and PDF deck actions
     document.getElementById("deck-fullscreen-btn").addEventListener("click", () => {
         setFullscreen(!isFullscreen());
@@ -2324,31 +2366,43 @@ function setupEventListeners() {
     });
 
     document.getElementById("deck-pdf-btn").addEventListener("click", downloadJsPdf);
+
+    document.getElementById("sample-btn").addEventListener("click", loadSampleChat);
 }
 
 function handleFiles(files) {
     if (files.length > 0) {
-        selectedFile = files.item(0);
-        document.getElementById("filename").innerText = selectedFile.name;
-        document.getElementById("file-info").classList.remove("hidden");
-
-        // Hide previous results to clean up space
-        setFullscreen(false);
-        document.getElementById("user-mapping-area").classList.add("hidden");
-        document.getElementById("dashboard-area").classList.add("hidden");
-
-        // Show Stepper and trigger stream parsing
-        document.getElementById("stepper-container").classList.remove("hidden");
-        updateStepUI("step-parse", "active");
-        updateStepUI("step-analyze", "pending");
-        updateStepUI("step-charts", "pending");
-        updateLineUI("line-parse-analyze", false);
-        updateLineUI("line-analyze-charts", false);
-
-        setTimeout(() => startFileStreaming(selectedFile), 100);
+        loadChatFile(files.item(0));
     } else {
         resetState();
     }
+}
+
+// "Örnek sunum oluştur": analyse a generated, fictional group chat (see sample-chat.js)
+function loadSampleChat() {
+    const text = generateSampleChat();
+    loadChatFile(new File([text], `WhatsApp Sohbeti - ${SAMPLE_GROUP_NAME} (örnek).txt`, { type: "text/plain" }));
+}
+
+function loadChatFile(file) {
+    selectedFile = file;
+    document.getElementById("filename").innerText = selectedFile.name;
+    document.getElementById("file-info").classList.remove("hidden");
+
+    // Hide previous results to clean up space
+    setFullscreen(false);
+    document.getElementById("user-mapping-area").classList.add("hidden");
+    document.getElementById("dashboard-area").classList.add("hidden");
+
+    // Show Stepper and trigger stream parsing
+    document.getElementById("stepper-container").classList.remove("hidden");
+    updateStepUI("step-parse", "active");
+    updateStepUI("step-analyze", "pending");
+    updateStepUI("step-charts", "pending");
+    updateLineUI("line-parse-analyze", false);
+    updateLineUI("line-analyze-charts", false);
+
+    setTimeout(() => startFileStreaming(selectedFile), 100);
 }
 
 function resetState() {
@@ -2391,23 +2445,7 @@ async function startFileStreaming(file) {
         // Emulate streaming/chunk loading for progress indicator
         setTimeout(() => {
             try {
-                const parsedLines = [];
-                let groupName = null;
-
-                const lines = textContent.split(/\r?\n/);
-                lines.forEach((line, idx) => {
-                    const parsed = parseLineString(line, idx);
-                    if (parsed) {
-                        if (idx === 1 && (parsed.content.includes("uçtan uca şifrelidir") || parsed.content.includes("end-to-end encrypted"))) {
-                            if (parsed.sender !== "System") {
-                                groupName = parsed.sender.trim();
-                            }
-                        }
-                        parsedLines.push(parsed);
-                    }
-                });
-
-                chatDateOrder = detectDateOrder(parsedLines.map(p => p.timestamp));
+                const { lines: parsedLines, groupName } = parseChatText(textContent);
 
                 parsedData = {
                     messages: parsedLines.map(p => [p.timestamp, p.sender, p.content]),
@@ -2476,12 +2514,12 @@ function populateUserMappingUI(senders) {
         div.className = "user-item";
 
         const label = document.createElement("label");
-        label.innerText = sender.replace(/\\/g, ''); // display clean name
+        label.innerText = sender;
         label.title = sender;
 
         const inputField = document.createElement("input");
         inputField.type = "text";
-        inputField.value = sender.replace(/\\/g, '');
+        inputField.value = sender;
         inputField.setAttribute("data-original", sender);
         inputField.className = "user-map-input";
 
@@ -2593,7 +2631,7 @@ async function downloadJsPdf() {
 
         for (let i = 0; i < slidesList.length; i++) {
             const slideWrapper = document.createElement("div");
-            slideWrapper.className = "slide-card";
+            slideWrapper.className = "slide-card pdf-slide";
             slideWrapper.style.width = "1024px";
             slideWrapper.style.height = "576px";
             slideWrapper.style.display = "flex";

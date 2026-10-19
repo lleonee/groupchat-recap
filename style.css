@@ -603,6 +603,7 @@ header h1 {
     border-bottom: 1px solid rgba(23, 23, 23, 0.1);
     font-size: 0.9rem;
     color: var(--text-color);
+    gap: 0.75rem;
 }
 
 .rank-item:last-child {
@@ -616,6 +617,7 @@ header h1 {
 .rank-item strong {
     font-weight: 700;
     color: var(--primary);
+    white-space: nowrap;
 }
 
 .slide-methodology-layout {
@@ -946,5 +948,201 @@ header h1 {
 
     #dashboard-area.fullscreen-active .slide-hint {
         display: none;
+    }
+}
+
+/* "Örnek sunum oluştur" demo button */
+.sample-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    width: 100%;
+}
+
+.sample-or {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.sample-btn {
+    width: 100%;
+}
+
+.sample-hint {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin: 0;
+    text-align: center;
+}
+
+/* Methodology slide: two columns, one on phones */
+.methodology-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 2rem;
+    max-height: 230px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    text-align: left;
+}
+
+@media (max-width: 768px) {
+    .methodology-grid {
+        grid-template-columns: 1fr;
+        max-height: none;
+    }
+
+    /* Streaks slide: stacked columns don't need the vertical divider */
+    .slide-split-layout > .slide-left {
+        border-right: none !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* 16px inputs: iOS Safari zooms the page in on focus for anything smaller */
+    .user-item input {
+        font-size: 16px;
+    }
+
+    .user-item label {
+        margin-right: 10px;
+    }
+}
+
+/* Phones in landscape: little height, so let the slide scroll instead of clipping it into 16:9 */
+@media (max-height: 520px) and (orientation: landscape) {
+    #dashboard-area.fullscreen-active {
+        justify-content: flex-start !important;
+        padding: 0.5rem 1rem !important;
+    }
+
+    #dashboard-area.fullscreen-active .deck-controls,
+    #dashboard-area.fullscreen-active .slide-viewport {
+        max-width: 100% !important;
+    }
+
+    #dashboard-area.fullscreen-active .deck-controls {
+        padding: 0.4rem 0.75rem;
+        margin-bottom: 0.5rem !important;
+    }
+
+    #dashboard-area.fullscreen-active .slide-card {
+        aspect-ratio: auto !important;
+        overflow: visible;
+        padding: 1.25rem 1.75rem;
+    }
+
+    #dashboard-area.fullscreen-active .chart-wrapper {
+        height: 200px !important;
+    }
+
+    #dashboard-area.fullscreen-active .slide-hint {
+        display: none;
+    }
+}
+
+/* PDF export renders 1024x576 slides: always the desktop layout, even when exported from a phone */
+.pdf-slide .slide-split-layout {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 2rem;
+}
+
+.pdf-slide .slide-header {
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+}
+
+.pdf-slide .slide-winner-name,
+.pdf-slide .slide-main-title {
+    font-size: 2.4rem;
+}
+
+.pdf-slide .slide-subtitle {
+    font-size: 1.2rem;
+}
+
+.pdf-slide .slide-methodology-layout {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+/* A PDF page can't scroll: every explanation on the page, in three columns */
+.pdf-slide .methodology-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 1.5rem;
+    max-height: none;
+    overflow: visible;
+}
+
+.pdf-slide .methodology-grid > div {
+    padding: 0.25rem 0 !important;
+}
+
+.pdf-slide .methodology-grid strong {
+    font-size: 0.72rem !important;
+}
+
+.pdf-slide .methodology-grid p {
+    font-size: 0.68rem !important;
+    line-height: 1.25 !important;
+}
+
+.pdf-slide .chart-wrapper {
+    height: 220px;
+}
+
+.pdf-slide .slide-split-layout > .slide-left[style*="border-right"] {
+    border-right: 1px solid rgba(23, 23, 23, 0.1) !important;
+    padding-right: 1.5rem !important;
+}
+
+.pdf-slide .slide-split-layout > .slide-left[style*="padding-left"] {
+    padding-left: 1.5rem !important;
+}
+
+/* Hover colors only on real pointers: on touch screens they stick after a tap */
+@media (hover: none) {
+    .secondary-btn:hover,
+    .deck-btn-secondary:hover {
+        background-color: transparent;
+        color: var(--text-color);
+    }
+
+    .deck-btn:hover {
+        background-color: var(--text-color);
+        border-color: var(--text-color);
+    }
+}
+
+/* Phones: deck controls in two compact rows (Geri · progress · İleri, then the action buttons) */
+@media (max-width: 768px) {
+    .deck-controls {
+        justify-content: space-between;
+        row-gap: 0.5rem;
+    }
+
+    .deck-btn {
+        padding: 0.45rem 0.8rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    #deck-progress {
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .deck-action-buttons {
+        gap: 6px !important;
+        flex-wrap: nowrap;
+    }
+
+    .deck-btn-secondary {
+        flex: 1;
+        padding: 0.45rem 0.4rem;
+        font-size: 0.78rem;
+        white-space: nowrap;
     }
 }
