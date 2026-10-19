@@ -10,9 +10,6 @@ __pycache__/
 *.pdf
 *.log
 
-# Private Docs
-CHANGELOG.md
-
 # System
 .DS_Store
 Thumbs.db
